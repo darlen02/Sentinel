@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"sentinel/internal/auth"
 	"sentinel/internal/database"
@@ -49,6 +50,10 @@ func main() {
 	collector := metrics.NewCollector()
 	hub := ws.NewHub(collector)
 	go hub.Run()
+
+	// Initialize and start historical metrics recorder (saves snapshots to SQLite every 15s)
+	recorder := metrics.NewRecorder(collector, db, 15*time.Second)
+	recorder.Start()
 
 	// 3. Initialize Auth Handler
 	authHandler := auth.NewHandler(db)
@@ -107,6 +112,16 @@ func main() {
 					return
 				}
 				c.JSON(http.StatusOK, snapshot)
+			})
+
+			metricsGroup.GET("/history", func(c *gin.Context) {
+				rangeStr := c.DefaultQuery("range", "24h")
+				history, err := db.GetMetricsHistory(rangeStr)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Geçmiş veriler alınamadı: " + err.Error()})
+					return
+				}
+				c.JSON(http.StatusOK, history)
 			})
 		}
 

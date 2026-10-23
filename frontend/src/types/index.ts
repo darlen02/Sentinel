@@ -130,3 +130,34 @@ export interface SystemMetrics {
   docker: DockerSummary;
 }
 
+export interface MetricHistoryPoint {
+  timestamp: number;
+  cpu_percent: number;
+  cpu_max: number;
+  memory_percent: number;
+  memory_used: number;
+  disk_used_percent: number;
+  net_recv_speed: number;
+  net_sent_speed: number;
+  load_1: number;
+  containers_running: number;
+}
+
+export interface MetricHistorySummary {
+  avg_cpu: number;
+  max_cpu: number;
+  avg_memory: number;
+  max_memory: number;
+  avg_disk: number;
+  total_net_recv_bytes: number;
+  total_net_sent_bytes: number;
+  max_load: number;
+}
+
+export interface MetricsHistoryResponse {
+  range: string;
+  count: number;
+  summary: MetricHistorySummary;
+  data: MetricHistoryPoint[];
+}
+

@@ -151,3 +151,34 @@ type SystemMetrics struct {
 	Processes []ProcessItem      `json:"processes"`
 	Docker    DockerSummary      `json:"docker"`
 }
+
+type MetricHistoryPoint struct {
+	Timestamp         int64   `json:"timestamp"`
+	CPUPercent        float64 `json:"cpu_percent"`
+	CPUMax            float64 `json:"cpu_max"`
+	MemoryPercent     float64 `json:"memory_percent"`
+	MemoryUsed        uint64  `json:"memory_used"`
+	DiskUsedPercent   float64 `json:"disk_used_percent"`
+	NetRecvSpeed      uint64  `json:"net_recv_speed"`
+	NetSentSpeed      uint64  `json:"net_sent_speed"`
+	Load1             float64 `json:"load_1"`
+	ContainersRunning int     `json:"containers_running"`
+}
+
+type MetricHistorySummary struct {
+	AvgCPU            float64 `json:"avg_cpu"`
+	MaxCPU            float64 `json:"max_cpu"`
+	AvgMemory         float64 `json:"avg_memory"`
+	MaxMemory         float64 `json:"max_memory"`
+	AvgDisk           float64 `json:"avg_disk"`
+	TotalNetRecvBytes uint64  `json:"total_net_recv_bytes"`
+	TotalNetSentBytes uint64  `json:"total_net_sent_bytes"`
+	MaxLoad           float64 `json:"max_load"`
+}
+
+type MetricsHistoryResponse struct {
+	Range   string               `json:"range"`
+	Count   int                  `json:"count"`
+	Summary MetricHistorySummary `json:"summary"`
+	Data    []MetricHistoryPoint `json:"data"`
+}

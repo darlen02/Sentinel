@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   LayoutDashboard,
+  LineChart,
   Box,
   Terminal,
   HardDrive,
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react';
 import type { HostInfo, SystemMetrics, User } from '../types';
 
-export type TabKey = 'overview' | 'docker' | 'processes' | 'storage' | 'network' | 'users' | 'server-info';
+export type TabKey = 'overview' | 'analytics' | 'docker' | 'processes' | 'storage' | 'network' | 'users' | 'server-info';
 
 interface SidebarProps {
   activeTab: TabKey;
@@ -45,6 +46,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: LayoutDashboard,
       badge: null,
       desc: 'Sistem Kaynak Özeti',
+    },
+    {
+      id: 'analytics' as TabKey,
+      label: 'Geçmiş & Analiz',
+      icon: LineChart,
+      badge: 'Geçmiş',
+      badgeColor: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+      desc: 'Zaman Serisi Trendleri',
     },
     {
       id: 'docker' as TabKey,

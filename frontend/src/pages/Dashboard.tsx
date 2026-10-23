@@ -12,6 +12,7 @@ import { NetworkCard } from '../components/NetworkCard';
 import { ProcessTable } from '../components/ProcessTable';
 import { DockerContainersCard } from '../components/DockerContainersCard';
 import { UsersManagement } from './UsersManagement';
+import { HistoricalAnalytics } from './HistoricalAnalytics';
 import { ChangePasswordModal } from '../components/ChangePasswordModal';
 import {
   Activity,
@@ -94,6 +95,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     switch (tab) {
       case 'overview':
         return 'Sistem Genel Bakış & Performans';
+      case 'analytics':
+        return 'Geçmiş Metrik Trendleri & Analiz';
       case 'docker':
         return 'Docker Konteyner Yönetimi';
       case 'processes':
@@ -281,6 +284,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
                   {/* Process Table */}
                   <ProcessTable processes={metrics.processes} userRole={user.role} />
+                </div>
+              )}
+
+              {/* TAB: HISTORICAL ANALYTICS */}
+              {activeTab === 'analytics' && (
+                <div className="space-y-6">
+                  <HistoricalAnalytics />
                 </div>
               )}
 

@@ -1,4 +1,4 @@
-import type { User, SystemMetrics, CreateUserData, UserRole } from '../types';
+import type { User, SystemMetrics, CreateUserData, UserRole, MetricsHistoryResponse } from '../types';
 
 const TOKEN_KEY = 'sentinel_auth_token';
 
@@ -126,6 +126,10 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ role }),
     });
+  },
+
+  async getMetricsHistory(range = '24h'): Promise<MetricsHistoryResponse> {
+    return request<MetricsHistoryResponse>(`/api/metrics/history?range=${range}`);
   },
 };
 
