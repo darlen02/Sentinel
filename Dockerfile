@@ -13,8 +13,11 @@ RUN npm run build
 # ==========================================
 # Stage 2: Build Go Backend
 # ==========================================
-FROM golang:1.24-alpine AS backend-builder
+FROM golang:alpine AS backend-builder
 WORKDIR /app/backend
+
+# Enable automatic toolchain downloads if newer version is requested
+ENV GOTOOLCHAIN=auto
 
 # Install build tools if needed
 RUN apk add --no-cache git ca-certificates
