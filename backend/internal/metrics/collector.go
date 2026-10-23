@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/user"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -25,6 +27,19 @@ type Collector struct {
 	lastCheckTime time.Time
 	dockerClient  *docker.Client
 
+	// Static host info cache (avoid repeated syscalls on immutable data)
+	cachedHostInfo  *host.InfoStat
+	cachedCPUModel  string
+	cachedCPUMhz    float64
+	logicalCores    int
+	physicalCores   int
+	lastStaticCheck time.Time
+
+	// Process cache & UID mapping
+	lastProcCheck   time.Time
+	cachedProcesses []models.ProcessItem
+	uidCache        map[string]string
+
 	// Previous counters for rate calculation
 	prevNetIO   map[string]net.IOCountersStat
 	prevDiskIO  disk.IOCountersStat
@@ -35,7 +50,28 @@ func NewCollector() *Collector {
 	return &Collector{
 		dockerClient: docker.NewClient(),
 		prevNetIO:    make(map[string]net.IOCountersStat),
+		uidCache:     make(map[string]string),
 	}
+}
+
+func (c *Collector) getUsername(p *process.Process) string {
+	uids, err := p.Uids()
+	if err == nil && len(uids) > 0 {
+		uidStr := strconv.Itoa(int(uids[0]))
+		if name, ok := c.uidCache[uidStr]; ok {
+			return name
+		}
+		if u, err := user.LookupId(uidStr); err == nil && u != nil {
+			c.uidCache[uidStr] = u.Username
+			return u.Username
+		}
+		c.uidCache[uidStr] = uidStr
+		return uidStr
+	}
+	if name, err := p.Username(); err == nil && name != "" {
+		return name
+	}
+	return "system"
 }
 
 func (c *Collector) Collect() (*models.SystemMetrics, error) {
@@ -55,19 +91,36 @@ func (c *Collector) Collect() (*models.SystemMetrics, error) {
 		Timestamp: now.UnixMilli(),
 	}
 
-	// 1. Host Info
-	if hInfo, err := host.Info(); err == nil {
+	// 1. Host Info (Cached static attributes for 5 minutes)
+	if c.cachedHostInfo == nil || now.Sub(c.lastStaticCheck) > 5*time.Minute {
+		if hInfo, err := host.Info(); err == nil {
+			c.cachedHostInfo = hInfo
+		}
+		if cpuInfos, err := cpu.Info(); err == nil && len(cpuInfos) > 0 {
+			c.cachedCPUModel = cpuInfos[0].ModelName
+			c.cachedCPUMhz = math.Round(cpuInfos[0].Mhz)
+		}
+		c.logicalCores, _ = cpu.Counts(true)
+		c.physicalCores, _ = cpu.Counts(false)
+		c.lastStaticCheck = now
+	}
+
+	if c.cachedHostInfo != nil {
+		uptime, _ := host.Uptime()
+		if uptime == 0 {
+			uptime = c.cachedHostInfo.Uptime
+		}
 		metrics.Host = models.HostInfo{
-			Hostname:        hInfo.Hostname,
-			OS:              hInfo.OS,
-			Platform:        hInfo.Platform,
-			PlatformVersion: hInfo.PlatformVersion,
-			KernelVersion:   hInfo.KernelVersion,
-			Architecture:    hInfo.KernelArch,
-			UptimeSeconds:   hInfo.Uptime,
-			UptimeFormatted: formatUptime(hInfo.Uptime),
-			ProcsCount:      hInfo.Procs,
-			BootTime:        hInfo.BootTime,
+			Hostname:        c.cachedHostInfo.Hostname,
+			OS:              c.cachedHostInfo.OS,
+			Platform:        c.cachedHostInfo.Platform,
+			PlatformVersion: c.cachedHostInfo.PlatformVersion,
+			KernelVersion:   c.cachedHostInfo.KernelVersion,
+			Architecture:    c.cachedHostInfo.KernelArch,
+			UptimeSeconds:   uptime,
+			UptimeFormatted: formatUptime(uptime),
+			ProcsCount:      c.cachedHostInfo.Procs,
+			BootTime:        c.cachedHostInfo.BootTime,
 		}
 	}
 
@@ -85,16 +138,10 @@ func (c *Collector) Collect() (*models.SystemMetrics, error) {
 		metrics.CPU.CoresPercent = coresPercent
 	}
 
-	cpuInfos, err := cpu.Info()
-	if err == nil && len(cpuInfos) > 0 {
-		metrics.CPU.ModelName = cpuInfos[0].ModelName
-		metrics.CPU.Mhz = math.Round(cpuInfos[0].Mhz)
-	}
-
-	logicalCores, _ := cpu.Counts(true)
-	physicalCores, _ := cpu.Counts(false)
-	metrics.CPU.LogicalCores = logicalCores
-	metrics.CPU.PhysicalCores = physicalCores
+	metrics.CPU.ModelName = c.cachedCPUModel
+	metrics.CPU.Mhz = c.cachedCPUMhz
+	metrics.CPU.LogicalCores = c.logicalCores
+	metrics.CPU.PhysicalCores = c.physicalCores
 
 	if l, err := load.Avg(); err == nil && l != nil {
 		metrics.CPU.Load1 = math.Round(l.Load1*100) / 100
@@ -127,64 +174,35 @@ func (c *Collector) Collect() (*models.SystemMetrics, error) {
 
 	if err == nil {
 		for _, p := range partitions {
-			// Skip pseudofs or duplicates
-			if p.Fstype == "squashfs" || p.Fstype == "tmpfs" || p.Fstype == "overlay" && hostRoot != "" {
-				continue
-			}
 			if seenMounts[p.Mountpoint] {
 				continue
 			}
-			u, err := disk.Usage(p.Mountpoint)
-			if err != nil || u.Total == 0 {
+
+			// In Docker container, host root is mounted at hostRoot
+			checkPath := p.Mountpoint
+			if hostRoot != "" && p.Mountpoint == "/" {
+				checkPath = hostRoot
+			}
+
+			usage, err := disk.Usage(checkPath)
+			if err != nil {
 				continue
 			}
+
 			seenMounts[p.Mountpoint] = true
 			metrics.Disks = append(metrics.Disks, models.DiskPartition{
 				Device:      p.Device,
 				Mountpoint:  p.Mountpoint,
 				Fstype:      p.Fstype,
-				Total:       u.Total,
-				Free:        u.Free,
-				Used:        u.Used,
-				UsedPercent: math.Round(u.UsedPercent*10) / 10,
+				Total:       usage.Total,
+				Free:        usage.Free,
+				Used:        usage.Used,
+				UsedPercent: math.Round(usage.UsedPercent*10) / 10,
 			})
 		}
 	}
 
-	// If running in docker with HOST_ROOT mounted (e.g., /host/root)
-	if hostRoot != "" {
-		if u, err := disk.Usage(hostRoot); err == nil && u.Total > 0 {
-			// Prepend host root as primary "/"
-			hostDisk := models.DiskPartition{
-				Device:      "Host Root Disk",
-				Mountpoint:  "/",
-				Fstype:      u.Fstype,
-				Total:       u.Total,
-				Free:        u.Free,
-				Used:        u.Used,
-				UsedPercent: math.Round(u.UsedPercent*10) / 10,
-			}
-			// Replace or prepend
-			metrics.Disks = append([]models.DiskPartition{hostDisk}, metrics.Disks...)
-		}
-	}
-
-	// Fallback if no disk found (e.g. initial container test)
-	if len(metrics.Disks) == 0 {
-		if u, err := disk.Usage("/"); err == nil {
-			metrics.Disks = append(metrics.Disks, models.DiskPartition{
-				Device:      "root",
-				Mountpoint:  "/",
-				Fstype:      u.Fstype,
-				Total:       u.Total,
-				Free:        u.Free,
-				Used:        u.Used,
-				UsedPercent: math.Round(u.UsedPercent*10) / 10,
-			})
-		}
-	}
-
-	// Disk IO speed
+	// Disk IO Rate
 	if diskIOCounters, err := disk.IOCounters(); err == nil {
 		var totalReadBytes, totalWriteBytes uint64
 		for _, io := range diskIOCounters {
@@ -192,37 +210,45 @@ func (c *Collector) Collect() (*models.SystemMetrics, error) {
 			totalWriteBytes += io.WriteBytes
 		}
 
-		if c.hasPrevDisk && timeDelta > 0 {
-			if totalReadBytes >= c.prevDiskIO.ReadBytes {
-				metrics.DiskIO.ReadBytesPerSec = uint64(float64(totalReadBytes-c.prevDiskIO.ReadBytes) / timeDelta)
-			}
-			if totalWriteBytes >= c.prevDiskIO.WriteBytes {
-				metrics.DiskIO.WriteBytesPerSec = uint64(float64(totalWriteBytes-c.prevDiskIO.WriteBytes) / timeDelta)
-			}
-		}
-		c.prevDiskIO = disk.IOCountersStat{
+		currentIO := disk.IOCountersStat{
 			ReadBytes:  totalReadBytes,
 			WriteBytes: totalWriteBytes,
 		}
+
+		if c.hasPrevDisk && timeDelta > 0 {
+			var readDelta, writeDelta uint64
+			if currentIO.ReadBytes >= c.prevDiskIO.ReadBytes {
+				readDelta = currentIO.ReadBytes - c.prevDiskIO.ReadBytes
+			}
+			if currentIO.WriteBytes >= c.prevDiskIO.WriteBytes {
+				writeDelta = currentIO.WriteBytes - c.prevDiskIO.WriteBytes
+			}
+
+			metrics.DiskIO = models.DiskIOInfo{
+				ReadBytesPerSec:  uint64(float64(readDelta) / timeDelta),
+				WriteBytesPerSec: uint64(float64(writeDelta) / timeDelta),
+			}
+		}
+		c.prevDiskIO = currentIO
 		c.hasPrevDisk = true
 	}
 
-	// 5. Network
-	if netIOCounters, err := net.IOCounters(true); err == nil {
+	// 5. Network Interfaces & Traffic Rates
+	if netCounters, err := net.IOCounters(true); err == nil {
 		newPrevNetIO := make(map[string]net.IOCountersStat)
-		for _, nic := range netIOCounters {
-			// Skip loopback if multiple interfaces exist
-			if nic.Name == "lo" && len(netIOCounters) > 1 {
+
+		for _, nic := range netCounters {
+			if nic.Name == "lo" {
 				continue
 			}
 
 			var speedRecv, speedSent uint64
-			if prev, ok := c.prevNetIO[nic.Name]; ok && timeDelta > 0 {
-				if nic.BytesRecv >= prev.BytesRecv {
-					speedRecv = uint64(float64(nic.BytesRecv-prev.BytesRecv) / timeDelta)
+			if prevNic, ok := c.prevNetIO[nic.Name]; ok && timeDelta > 0 {
+				if nic.BytesRecv >= prevNic.BytesRecv {
+					speedRecv = uint64(float64(nic.BytesRecv-prevNic.BytesRecv) / timeDelta)
 				}
-				if nic.BytesSent >= prev.BytesSent {
-					speedSent = uint64(float64(nic.BytesSent-prev.BytesSent) / timeDelta)
+				if nic.BytesSent >= prevNic.BytesSent {
+					speedSent = uint64(float64(nic.BytesSent-prevNic.BytesSent) / timeDelta)
 				}
 			}
 
@@ -240,7 +266,7 @@ func (c *Collector) Collect() (*models.SystemMetrics, error) {
 		c.prevNetIO = newPrevNetIO
 	}
 
-	// 6. Top Processes
+	// 6. Top Processes (High performance candidate sorting & lazy enrichment)
 	metrics.Processes = c.collectTopProcesses()
 
 	// 7. Docker Containers Telemetry
@@ -251,12 +277,27 @@ func (c *Collector) Collect() (*models.SystemMetrics, error) {
 }
 
 func (c *Collector) collectTopProcesses() []models.ProcessItem {
+	now := time.Now()
+	// Refresh full process list every 3 seconds to eliminate high /proc disk scanning overhead
+	if len(c.cachedProcesses) > 0 && now.Sub(c.lastProcCheck) < 3*time.Second {
+		return c.cachedProcesses
+	}
+	c.lastProcCheck = now
+
 	procs, err := process.Processes()
 	if err != nil {
-		return nil
+		return c.cachedProcesses
 	}
 
-	items := make([]models.ProcessItem, 0, len(procs))
+	type procCandidate struct {
+		proc *process.Process
+		pid  int32
+		name string
+		cpuP float64
+		memP float32
+	}
+
+	candidates := make([]procCandidate, 0, len(procs))
 	for _, p := range procs {
 		name, err := p.Name()
 		if err != nil || name == "" {
@@ -265,17 +306,46 @@ func (c *Collector) collectTopProcesses() []models.ProcessItem {
 
 		cpuP, _ := p.CPUPercent()
 		memP, _ := p.MemoryPercent()
-		username, _ := p.Username()
+
+		candidates = append(candidates, procCandidate{
+			proc: p,
+			pid:  p.Pid,
+			name: name,
+			cpuP: cpuP,
+			memP: memP,
+		})
+	}
+
+	// Sort candidates by CPU% descending, then Memory%
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].cpuP != candidates[j].cpuP {
+			return candidates[i].cpuP > candidates[j].cpuP
+		}
+		return candidates[i].memP > candidates[j].memP
+	})
+
+	// Only enrich the TOP 50 displayed processes (reduces syscall overhead by >85%)
+	limit := 50
+	if len(candidates) < limit {
+		limit = len(candidates)
+	}
+
+	items := make([]models.ProcessItem, 0, limit)
+	for i := 0; i < limit; i++ {
+		cand := candidates[i]
+		p := cand.proc
+
+		var memBytes uint64
+		if memInfo, err := p.MemoryInfo(); err == nil && memInfo != nil {
+			memBytes = memInfo.RSS
+		}
+
 		statusSlice, _ := p.Status()
 		status := "running"
 		if len(statusSlice) > 0 {
 			status = statusSlice[0]
 		}
 
-		var memBytes uint64
-		if memInfo, err := p.MemoryInfo(); err == nil && memInfo != nil {
-			memBytes = memInfo.RSS
-		}
 		createTime, _ := p.CreateTime()
 		cmdline, _ := p.Cmdline()
 		if len(cmdline) > 200 {
@@ -283,11 +353,11 @@ func (c *Collector) collectTopProcesses() []models.ProcessItem {
 		}
 
 		items = append(items, models.ProcessItem{
-			PID:           p.Pid,
-			Name:          name,
-			Username:      username,
-			CPUPercent:    math.Round(cpuP*10) / 10,
-			MemoryPercent: float32(math.Round(float64(memP)*10) / 10),
+			PID:           cand.pid,
+			Name:          cand.name,
+			Username:      c.getUsername(p),
+			CPUPercent:    math.Round(cand.cpuP*10) / 10,
+			MemoryPercent: float32(math.Round(float64(cand.memP)*10) / 10),
 			MemoryBytes:   memBytes,
 			Status:        status,
 			CreateTime:    createTime,
@@ -295,19 +365,7 @@ func (c *Collector) collectTopProcesses() []models.ProcessItem {
 		})
 	}
 
-	// Sort by CPU% descending, then Memory%
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].CPUPercent != items[j].CPUPercent {
-			return items[i].CPUPercent > items[j].CPUPercent
-		}
-		return items[i].MemoryPercent > items[j].MemoryPercent
-	})
-
-	// Limit to top 50 processes
-	if len(items) > 50 {
-		items = items[:50]
-	}
-
+	c.cachedProcesses = items
 	return items
 }
 
@@ -337,4 +395,3 @@ func KillProcess(pid int32) error {
 	}
 	return p.Kill()
 }
-

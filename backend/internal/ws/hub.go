@@ -51,7 +51,7 @@ func NewHub(collector *metrics.Collector) *Hub {
 
 func (h *Hub) Run() {
 	// Background ticker for periodic host metric streaming
-	ticker := time.NewTicker(1500 * time.Millisecond)
+	ticker := time.NewTicker(2000 * time.Millisecond)
 	defer ticker.Stop()
 
 	go func() {
