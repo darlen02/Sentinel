@@ -1,0 +1,36 @@
+services:
+  sentinel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sentinel
+    restart: unless-stopped
+    ports:
+      - "${PORT:-28475}:${PORT:-28475}"
+    # pid: host enables full visibility into Ubuntu host processes
+    pid: "host"
+    environment:
+      - PORT=${PORT:-28475}
+      - DB_PATH=/app/data/sentinel.db
+      - STATIC_DIR=/app/frontend/dist
+      - GIN_MODE=release
+      - JWT_SECRET=sentinel-secure-jwt-token-change-in-production-2026
+      # Default admin credentials created automatically on initial start:
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin
+      # Ubuntu Host metric paths mounted inside container:
+      - HOST_PROC=/host/proc
+      - HOST_SYS=/host/sys
+      - HOST_ETC=/host/etc
+      - HOST_ROOT=/host/root
+      - DOCKER_SOCKET=/var/run/docker.sock
+    volumes:
+      # Host telemetry mounts (read-only for security)
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc:/host/etc:ro
+      - /:/host/root:ro
+      # Docker socket to monitor running containers
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Local SQLite persistent database volume
+      - ./data:/app/data
