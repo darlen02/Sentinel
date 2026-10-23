@@ -26,6 +26,17 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"new_password" binding:"required,min=6"`
 }
 
+type CreateUserRequest struct {
+	Username string `json:"username" binding:"required,min=3"`
+	Password string `json:"password" binding:"required,min=6"`
+	Role     string `json:"role" binding:"required,oneof=admin operator viewer"`
+}
+
+type UpdateUserRoleRequest struct {
+	Role string `json:"role" binding:"required,oneof=admin operator viewer"`
+}
+
+
 type HostInfo struct {
 	Hostname        string `json:"hostname"`
 	OS              string `json:"os"`

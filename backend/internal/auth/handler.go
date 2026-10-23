@@ -2,6 +2,7 @@ package auth
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -176,3 +177,105 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Parolanız başarıyla güncellendi."})
 }
+
+func (h *Handler) RequireRole(allowedRoles ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		roleVal, exists := c.Get("role")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Rol yetkisi doğrulanamadı."})
+			c.Abort()
+			return
+		}
+
+		userRole := roleVal.(string)
+		for _, r := range allowedRoles {
+			if r == userRole {
+				c.Next()
+				return
+			}
+		}
+
+		c.JSON(http.StatusForbidden, gin.H{"error": "Bu işlem için yetkiniz bulunmamaktadır."})
+		c.Abort()
+	}
+}
+
+func (h *Handler) ListUsers(c *gin.Context) {
+	users, err := h.db.GetAllUsers()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Kullanıcılar alınamadı."})
+		return
+	}
+	c.JSON(http.StatusOK, users)
+}
+
+func (h *Handler) CreateUser(c *gin.Context) {
+	var req models.CreateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Geçerli kullanıcı adı, parola (en az 6 karakter) ve rol (admin/operator/viewer) giriniz."})
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Parola hashlenemedi."})
+		return
+	}
+
+	user, err := h.db.CreateUser(req.Username, string(hash), req.Role)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE") {
+			c.JSON(http.StatusConflict, gin.H{"error": "Bu kullanıcı adı zaten mevcut."})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Kullanıcı oluşturulamadı: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, user)
+}
+
+func (h *Handler) DeleteUser(c *gin.Context) {
+	currentUserID := c.GetInt64("userID")
+	idStr := c.Param("id")
+	targetID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Geçersiz kullanıcı ID."})
+		return
+	}
+
+	if currentUserID == targetID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Kendi hesabınızı silemezsiniz."})
+		return
+	}
+
+	if err := h.db.DeleteUser(targetID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Kullanıcı silinemedi."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Kullanıcı başarıyla silindi."})
+}
+
+func (h *Handler) UpdateRole(c *gin.Context) {
+	idStr := c.Param("id")
+	targetID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Geçersiz kullanıcı ID."})
+		return
+	}
+
+	var req models.UpdateUserRoleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Geçerli bir rol seçiniz (admin, operator, viewer)."})
+		return
+	}
+
+	if err := h.db.UpdateUserRole(targetID, req.Role); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Rol güncellenemedi."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Kullanıcı rolü başarıyla güncellendi."})
+}
+

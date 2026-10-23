@@ -1,10 +1,19 @@
+export type UserRole = 'admin' | 'operator' | 'viewer';
+
 export interface User {
   id: number;
   username: string;
-  role: string;
+  role: UserRole;
   created_at: string;
   last_login?: string;
 }
+
+export interface CreateUserData {
+  username: string;
+  password: string;
+  role: UserRole;
+}
+
 
 export interface HostInfo {
   hostname: string;

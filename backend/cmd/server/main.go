@@ -110,9 +110,9 @@ func main() {
 			})
 		}
 
-		// Protected Process Management
+		// Protected Process Management (Admin & Operator only)
 		processGroup := api.Group("/processes")
-		processGroup.Use(authHandler.AuthMiddleware())
+		processGroup.Use(authHandler.AuthMiddleware(), authHandler.RequireRole("admin", "operator"))
 		{
 			processGroup.POST("/:pid/kill", func(c *gin.Context) {
 				pidStr := c.Param("pid")
@@ -129,9 +129,9 @@ func main() {
 			})
 		}
 
-		// Protected Docker Management
+		// Protected Docker Management (Admin & Operator only)
 		dockerGroup := api.Group("/docker")
-		dockerGroup.Use(authHandler.AuthMiddleware())
+		dockerGroup.Use(authHandler.AuthMiddleware(), authHandler.RequireRole("admin", "operator"))
 		{
 			dockerClient := collector.GetDockerClient()
 
@@ -161,6 +161,16 @@ func main() {
 				}
 				c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Konteyner (%s) başlatıldı.", id)})
 			})
+		}
+
+		// Protected User & Role Management (Admin only)
+		userGroup := api.Group("/users")
+		userGroup.Use(authHandler.AuthMiddleware(), authHandler.RequireRole("admin"))
+		{
+			userGroup.GET("", authHandler.ListUsers)
+			userGroup.POST("", authHandler.CreateUser)
+			userGroup.DELETE("/:id", authHandler.DeleteUser)
+			userGroup.PUT("/:id/role", authHandler.UpdateRole)
 		}
 	}
 

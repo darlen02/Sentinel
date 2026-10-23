@@ -1,4 +1,4 @@
-import type { User, SystemMetrics } from '../types';
+import type { User, SystemMetrics, CreateUserData, UserRole } from '../types';
 
 const TOKEN_KEY = 'sentinel_auth_token';
 
@@ -103,5 +103,30 @@ export const api = {
       method: 'POST',
     });
   },
+
+  async getUsers(): Promise<User[]> {
+    return request<User[]>('/api/users');
+  },
+
+  async createUser(data: CreateUserData): Promise<User> {
+    return request<User>('/api/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteUser(id: number): Promise<{ message: string }> {
+    return request<{ message: string }>(`/api/users/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async updateUserRole(id: number, role: UserRole): Promise<{ message: string }> {
+    return request<{ message: string }>(`/api/users/${id}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
+  },
 };
+
 

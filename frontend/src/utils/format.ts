@@ -22,27 +22,27 @@ export function getStatusColor(percent: number): {
 } {
   if (percent >= 85) {
     return {
-      text: 'text-red-400',
-      bg: 'bg-red-500/10',
-      border: 'border-red-500/30',
-      bar: 'bg-red-500',
-      glow: 'shadow-[0_0_12px_rgba(239,68,68,0.5)]',
+      text: 'text-rose-600 dark:text-rose-400',
+      bg: 'bg-rose-50 dark:bg-rose-500/10',
+      border: 'border-rose-200 dark:border-rose-500/30',
+      bar: 'bg-rose-500',
+      glow: 'shadow-[0_0_12px_rgba(244,63,94,0.35)]',
     };
   }
   if (percent >= 65) {
     return {
-      text: 'text-amber-400',
-      bg: 'bg-amber-500/10',
-      border: 'border-amber-500/30',
+      text: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-50 dark:bg-amber-500/10',
+      border: 'border-amber-200 dark:border-amber-500/30',
       bar: 'bg-amber-500',
-      glow: 'shadow-[0_0_12px_rgba(245,158,11,0.5)]',
+      glow: 'shadow-[0_0_12px_rgba(245,158,11,0.35)]',
     };
   }
   return {
-    text: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/30',
+    text: 'text-emerald-600 dark:text-emerald-400',
+    bg: 'bg-emerald-50 dark:bg-emerald-500/10',
+    border: 'border-emerald-200 dark:border-emerald-500/30',
     bar: 'bg-emerald-500',
-    glow: 'shadow-[0_0_12px_rgba(16,185,129,0.5)]',
+    glow: 'shadow-[0_0_12px_rgba(16,185,129,0.35)]',
   };
 }

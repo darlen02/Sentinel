@@ -142,6 +142,56 @@ func (d *DB) UpdateLastLogin(id int64) error {
 	return err
 }
 
+func (d *DB) GetAllUsers() ([]models.User, error) {
+	rows, err := d.Sql.Query("SELECT id, username, role, created_at, last_login FROM users ORDER BY id ASC")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := make([]models.User, 0)
+	for rows.Next() {
+		var u models.User
+		var lastLogin sql.NullTime
+		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.CreatedAt, &lastLogin); err != nil {
+			return nil, err
+		}
+		if lastLogin.Valid {
+			u.LastLogin = &lastLogin.Time
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
+func (d *DB) CreateUser(username, passwordHash, role string) (*models.User, error) {
+	res, err := d.Sql.Exec(
+		"INSERT INTO users (username, password_hash, role, created_at) VALUES (?, ?, ?, ?)",
+		username, passwordHash, role, time.Now(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+
+	return d.GetUserByID(id)
+}
+
+func (d *DB) DeleteUser(id int64) error {
+	_, err := d.Sql.Exec("DELETE FROM users WHERE id = ?", id)
+	return err
+}
+
+func (d *DB) UpdateUserRole(id int64, role string) error {
+	_, err := d.Sql.Exec("UPDATE users SET role = ? WHERE id = ?", role, id)
+	return err
+}
+
 func (d *DB) Close() error {
 	return d.Sql.Close()
 }
+
