@@ -22,6 +22,27 @@ import (
 	"github.com/shirou/gopsutil/v4/process"
 )
 
+const (
+	// processScanInterval is the minimum time between full /proc process scans.
+	// Scanning every process is the single most expensive operation in the collector.
+	processScanInterval = 5 * time.Second
+
+	// topProcessLimit is the number of processes that are enriched and sent to clients.
+	topProcessLimit = 50
+
+	// partitionCacheTTL is how long the mount table is cached (it rarely changes).
+	partitionCacheTTL = 60 * time.Second
+)
+
+// procStatic holds slow-changing per-process attributes so they are not
+// re-read from /proc on every scan.
+type procStatic struct {
+	name       string
+	username   string
+	cmdline    string
+	createTime int64
+}
+
 type Collector struct {
 	mu            sync.Mutex
 	lastCheckTime time.Time
@@ -35,10 +56,21 @@ type Collector struct {
 	physicalCores   int
 	lastStaticCheck time.Time
 
+	// Disk partition (mount table) cache
+	cachedPartitions []disk.PartitionStat
+	lastPartCheck    time.Time
+
 	// Process cache & UID mapping
 	lastProcCheck   time.Time
 	cachedProcesses []models.ProcessItem
 	uidCache        map[string]string
+	prevProcCPU     map[int32]float64    // pid -> cumulative CPU seconds at previous scan
+	procStatic      map[int32]procStatic // pid -> cached name/user/cmdline/create time
+	memTotal        uint64
+
+	// Most recent full snapshot (lets the recorder reuse live data instead of re-collecting)
+	lastFull   *models.SystemMetrics
+	lastFullAt time.Time
 
 	// Previous counters for rate calculation
 	prevNetIO   map[string]net.IOCountersStat
@@ -51,6 +83,8 @@ func NewCollector() *Collector {
 		dockerClient: docker.NewClient(),
 		prevNetIO:    make(map[string]net.IOCountersStat),
 		uidCache:     make(map[string]string),
+		prevProcCPU:  make(map[int32]float64),
+		procStatic:   make(map[int32]procStatic),
 	}
 }
 
@@ -74,7 +108,28 @@ func (c *Collector) getUsername(p *process.Process) string {
 	return "system"
 }
 
+// Collect gathers a full snapshot, including per-core CPU and the process table.
 func (c *Collector) Collect() (*models.SystemMetrics, error) {
+	return c.collect(true)
+}
+
+// CollectLite gathers only the data needed for historical recording
+// (no per-core CPU, no process table scan).
+func (c *Collector) CollectLite() (*models.SystemMetrics, error) {
+	return c.collect(false)
+}
+
+// Latest returns the most recent full snapshot if it is younger than maxAge, otherwise nil.
+func (c *Collector) Latest(maxAge time.Duration) *models.SystemMetrics {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.lastFull != nil && time.Since(c.lastFullAt) <= maxAge {
+		return c.lastFull
+	}
+	return nil
+}
+
+func (c *Collector) collect(full bool) (*models.SystemMetrics, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -124,18 +179,18 @@ func (c *Collector) Collect() (*models.SystemMetrics, error) {
 		}
 	}
 
-	// 2. CPU
-	overallPercent, err := cpu.Percent(0, false)
-	if err == nil && len(overallPercent) > 0 {
-		metrics.CPU.OverallPercent = math.Round(overallPercent[0]*10) / 10
-	}
-
+	// 2. CPU (a single per-core read; the overall figure is derived from it)
 	coresPercent, err := cpu.Percent(0, true)
-	if err == nil {
+	if err == nil && len(coresPercent) > 0 {
+		var sum float64
 		for i, p := range coresPercent {
+			sum += p
 			coresPercent[i] = math.Round(p*10) / 10
 		}
-		metrics.CPU.CoresPercent = coresPercent
+		metrics.CPU.OverallPercent = math.Round(sum/float64(len(coresPercent))*10) / 10
+		if full {
+			metrics.CPU.CoresPercent = coresPercent
+		}
 	}
 
 	metrics.CPU.ModelName = c.cachedCPUModel
@@ -151,6 +206,7 @@ func (c *Collector) Collect() (*models.SystemMetrics, error) {
 
 	// 3. Memory
 	if vMem, err := mem.VirtualMemory(); err == nil {
+		c.memTotal = vMem.Total
 		metrics.Memory = models.MemoryInfo{
 			Total:       vMem.Total,
 			Available:   vMem.Available,
@@ -167,13 +223,18 @@ func (c *Collector) Collect() (*models.SystemMetrics, error) {
 		metrics.Memory.SwapUsedPercent = math.Round(sMem.UsedPercent*10) / 10
 	}
 
-	// 4. Disks
+	// 4. Disks (the mount table is cached; usage is re-read on every sample)
 	hostRoot := os.Getenv("HOST_ROOT")
-	partitions, err := disk.Partitions(false)
+	if c.cachedPartitions == nil || now.Sub(c.lastPartCheck) > partitionCacheTTL {
+		if parts, perr := disk.Partitions(false); perr == nil {
+			c.cachedPartitions = parts
+			c.lastPartCheck = now
+		}
+	}
 	seenMounts := make(map[string]bool)
 
-	if err == nil {
-		for _, p := range partitions {
+	if len(c.cachedPartitions) > 0 {
+		for _, p := range c.cachedPartitions {
 			if seenMounts[p.Mountpoint] {
 				continue
 			}
@@ -266,105 +327,145 @@ func (c *Collector) Collect() (*models.SystemMetrics, error) {
 		c.prevNetIO = newPrevNetIO
 	}
 
-	// 6. Top Processes (High performance candidate sorting & lazy enrichment)
-	metrics.Processes = c.collectTopProcesses()
+	// 6. Top Processes (only for full snapshots; the recorder never needs them)
+	if full {
+		metrics.Processes = c.collectTopProcesses()
+	}
 
 	// 7. Docker Containers Telemetry
 	metrics.Docker = c.dockerClient.GetSummary()
 
 	c.lastCheckTime = now
+	if full {
+		c.lastFull = metrics
+		c.lastFullAt = now
+	}
 	return metrics, nil
 }
 
+// collectTopProcesses scans /proc at most every processScanInterval.
+//
+// Cost model per scan: two /proc reads per process (stat for CPU times, statm
+// for RSS). CPU% is computed from the delta of cumulative CPU time since the
+// previous scan, which is both cheaper and more accurate than gopsutil's
+// CPUPercent (a lifetime average that also re-reads the start time every call).
+// Slow-changing attributes (name, user, cmdline, start time) are cached for the
+// processes that stay in the top list.
 func (c *Collector) collectTopProcesses() []models.ProcessItem {
 	now := time.Now()
-	// Refresh full process list every 3 seconds to eliminate high /proc disk scanning overhead
-	if len(c.cachedProcesses) > 0 && now.Sub(c.lastProcCheck) < 3*time.Second {
+	if len(c.cachedProcesses) > 0 && now.Sub(c.lastProcCheck) < processScanInterval {
 		return c.cachedProcesses
 	}
-	c.lastProcCheck = now
 
 	procs, err := process.Processes()
 	if err != nil {
 		return c.cachedProcesses
 	}
 
+	elapsed := now.Sub(c.lastProcCheck).Seconds()
+	havePrev := len(c.prevProcCPU) > 0 && elapsed > 0
+	c.lastProcCheck = now
+
 	type procCandidate struct {
 		proc *process.Process
-		pid  int32
-		name string
 		cpuP float64
-		memP float32
+		rss  uint64
 	}
 
 	candidates := make([]procCandidate, 0, len(procs))
+	newPrev := make(map[int32]float64, len(procs))
+
 	for _, p := range procs {
-		name, err := p.Name()
-		if err != nil || name == "" {
+		times, err := p.Times()
+		if err != nil || times == nil {
 			continue
 		}
+		used := times.User + times.System
+		newPrev[p.Pid] = used
 
-		cpuP, _ := p.CPUPercent()
-		memP, _ := p.MemoryPercent()
+		var cpuP float64
+		if havePrev {
+			if prev, ok := c.prevProcCPU[p.Pid]; ok && used >= prev {
+				cpuP = (used - prev) / elapsed * 100
+			}
+		}
+
+		var rss uint64
+		if memInfo, err := p.MemoryInfo(); err == nil && memInfo != nil {
+			rss = memInfo.RSS
+		}
 
 		candidates = append(candidates, procCandidate{
 			proc: p,
-			pid:  p.Pid,
-			name: name,
 			cpuP: cpuP,
-			memP: memP,
+			rss:  rss,
 		})
 	}
+	c.prevProcCPU = newPrev
 
-	// Sort candidates by CPU% descending, then Memory%
+	// Sort candidates by CPU% descending, then resident memory
 	sort.Slice(candidates, func(i, j int) bool {
 		if candidates[i].cpuP != candidates[j].cpuP {
 			return candidates[i].cpuP > candidates[j].cpuP
 		}
-		return candidates[i].memP > candidates[j].memP
+		return candidates[i].rss > candidates[j].rss
 	})
 
-	// Only enrich the TOP 50 displayed processes (reduces syscall overhead by >85%)
-	limit := 50
-	if len(candidates) < limit {
-		limit = len(candidates)
-	}
+	memTotal := float64(c.memTotal)
+	items := make([]models.ProcessItem, 0, topProcessLimit)
+	newStatic := make(map[int32]procStatic, topProcessLimit)
 
-	items := make([]models.ProcessItem, 0, limit)
-	for i := 0; i < limit; i++ {
-		cand := candidates[i]
+	// Only the top processes are enriched (reduces syscall overhead by >85%)
+	for _, cand := range candidates {
+		if len(items) >= topProcessLimit {
+			break
+		}
 		p := cand.proc
 
-		var memBytes uint64
-		if memInfo, err := p.MemoryInfo(); err == nil && memInfo != nil {
-			memBytes = memInfo.RSS
+		info, ok := c.procStatic[p.Pid]
+		if !ok {
+			name, err := p.Name()
+			if err != nil || name == "" {
+				continue
+			}
+			createTime, _ := p.CreateTime()
+			cmdline, _ := p.Cmdline()
+			if len(cmdline) > 200 {
+				cmdline = cmdline[:197] + "..."
+			}
+			info = procStatic{
+				name:       name,
+				username:   c.getUsername(p),
+				cmdline:    cmdline,
+				createTime: createTime,
+			}
 		}
+		newStatic[p.Pid] = info
 
-		statusSlice, _ := p.Status()
 		status := "running"
-		if len(statusSlice) > 0 {
+		if statusSlice, _ := p.Status(); len(statusSlice) > 0 {
 			status = statusSlice[0]
 		}
 
-		createTime, _ := p.CreateTime()
-		cmdline, _ := p.Cmdline()
-		if len(cmdline) > 200 {
-			cmdline = cmdline[:197] + "..."
+		var memP float64
+		if memTotal > 0 {
+			memP = float64(cand.rss) / memTotal * 100
 		}
 
 		items = append(items, models.ProcessItem{
-			PID:           cand.pid,
-			Name:          cand.name,
-			Username:      c.getUsername(p),
+			PID:           p.Pid,
+			Name:          info.name,
+			Username:      info.username,
 			CPUPercent:    math.Round(cand.cpuP*10) / 10,
-			MemoryPercent: float32(math.Round(float64(cand.memP)*10) / 10),
-			MemoryBytes:   memBytes,
+			MemoryPercent: float32(math.Round(memP*10) / 10),
+			MemoryBytes:   cand.rss,
 			Status:        status,
-			CreateTime:    createTime,
-			Cmdline:       cmdline,
+			CreateTime:    info.createTime,
+			Cmdline:       info.cmdline,
 		})
 	}
 
+	c.procStatic = newStatic
 	c.cachedProcesses = items
 	return items
 }

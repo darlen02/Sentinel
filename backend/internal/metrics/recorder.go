@@ -60,9 +60,15 @@ func (r *Recorder) Stop() {
 }
 
 func (r *Recorder) recordSnapshot() {
-	m, err := r.collector.Collect()
-	if err != nil || m == nil {
-		return
+	// Reuse the live snapshot if a dashboard is connected; otherwise take a
+	// lightweight sample (no process table scan, no per-core CPU).
+	m := r.collector.Latest(10 * time.Second)
+	if m == nil {
+		var err error
+		m, err = r.collector.CollectLite()
+		if err != nil || m == nil {
+			return
+		}
 	}
 
 	var diskUsedPercent float64

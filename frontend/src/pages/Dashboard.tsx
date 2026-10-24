@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { SystemMetrics, User } from '../types';
+import type { SystemMetrics, User, LiveSample } from '../types';
 import { wsClient } from '../services/ws';
 import type { ConnectionStatus } from '../services/ws';
 import { Sidebar } from '../components/Sidebar';
@@ -30,14 +30,13 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
-const MAX_HISTORY = 30;
+const MAX_HISTORY = 40;
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [wsStatus, setWsStatus] = useState<ConnectionStatus>('connecting');
   const [latencyMs, setLatencyMs] = useState(0);
-  const [cpuHistory, setCpuHistory] = useState<number[]>([]);
-  const [memHistory, setMemHistory] = useState<number[]>([]);
+  const [samples, setSamples] = useState<LiveSample[]>([]);
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -69,13 +68,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       setMetrics(data);
       setLatencyMs(latency);
 
-      setCpuHistory((prev) => {
-        const next = [...prev, data.cpu.overall_percent];
-        return next.length > MAX_HISTORY ? next.slice(next.length - MAX_HISTORY) : next;
-      });
+      const rx = data.network?.reduce((a, b) => a + b.speed_recv_per_sec, 0) || 0;
+      const tx = data.network?.reduce((a, b) => a + b.speed_sent_per_sec, 0) || 0;
+      const diskR = data.disk_io ? data.disk_io.read_bytes_per_sec : 0;
+      const diskW = data.disk_io ? data.disk_io.write_bytes_per_sec : 0;
 
-      setMemHistory((prev) => {
-        const next = [...prev, data.memory.used_percent];
+      const newSample: LiveSample = {
+        t: data.timestamp || Date.now(),
+        cpu: data.cpu.overall_percent,
+        mem: data.memory.used_percent,
+        rx,
+        tx,
+        diskR,
+        diskW,
+      };
+
+      setSamples((prev) => {
+        const next = [...prev, newSample];
         return next.length > MAX_HISTORY ? next.slice(next.length - MAX_HISTORY) : next;
       });
     });
@@ -84,7 +93,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       setWsStatus(status);
     });
 
+    // Pause the live stream while the tab is in the background: with no
+    // connected clients the server stops collecting metrics entirely.
+    let hideTimer: number | undefined;
+    const handleVisibility = () => {
+      if (document.hidden) {
+        hideTimer = window.setTimeout(() => wsClient.disconnect(), 15000);
+      } else {
+        if (hideTimer !== undefined) {
+          window.clearTimeout(hideTimer);
+          hideTimer = undefined;
+        }
+        wsClient.connect();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (hideTimer !== undefined) window.clearTimeout(hideTimer);
       unsubMetrics();
       unsubStatus();
       wsClient.disconnect();
@@ -269,8 +296,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 <div className="space-y-6">
                   {/* CPU and RAM Cards */}
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    <CpuCard cpu={metrics.cpu} history={cpuHistory} />
-                    <MemoryCard memory={metrics.memory} history={memHistory} />
+                    <CpuCard cpu={metrics.cpu} samples={samples} />
+                    <MemoryCard memory={metrics.memory} samples={samples} />
                   </div>
 
                   {/* Disk and Network Cards */}

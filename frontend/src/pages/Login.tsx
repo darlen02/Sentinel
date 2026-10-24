@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Lock, User, Eye, EyeOff, Loader2, AlertCircle, Info, Server } from 'lucide-react';
+import { Shield, Lock, User, Eye, EyeOff, Loader2, AlertCircle, Info, Server, Sun, Moon } from 'lucide-react';
 import { api } from '../services/api';
 import type { User as UserType } from '../types';
 
@@ -13,6 +13,22 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    return document.documentElement.classList.contains('dark');
+  });
+
+  const toggleTheme = () => {
+    if (isDark) {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('sentinel_theme', 'light');
+      setIsDark(false);
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('sentinel_theme', 'dark');
+      setIsDark(true);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +69,18 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           backgroundSize: '24px 24px'
         }}
       />
+
+      {/* Top right theme toggle */}
+      <div className="absolute top-5 right-5 z-20">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          title={isDark ? 'Aydınlık Temaya Geç' : 'Karanlık Temaya Geç'}
+          className="p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+        >
+          {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+        </button>
+      </div>
 
       <div className="w-full max-w-md relative z-10 animate-in fade-in duration-300">
         {/* Brand Card */}

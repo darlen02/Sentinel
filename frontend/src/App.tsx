@@ -49,9 +49,9 @@ export function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070a11] flex flex-col items-center justify-center text-slate-300">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mb-3" />
-        <span className="text-xs font-mono tracking-wider text-slate-400">SENTINEL BAŞLATILIYOR...</span>
+      <div className="min-h-screen bg-slate-50 dark:bg-[#070a11] flex flex-col items-center justify-center text-slate-800 dark:text-slate-300">
+        <Loader2 className="w-8 h-8 text-cyan-600 dark:text-cyan-400 animate-spin mb-3" />
+        <span className="text-xs font-mono tracking-wider text-slate-500 dark:text-slate-400">SENTINEL BAŞLATILIYOR...</span>
       </div>
     );
   }

@@ -161,3 +161,14 @@ export interface MetricsHistoryResponse {
   data: MetricHistoryPoint[];
 }
 
+
+/** One live telemetry sample kept in the browser for the real-time charts. */
+export interface LiveSample {
+  t: number;
+  cpu: number;
+  mem: number;
+  rx: number;
+  tx: number;
+  diskR: number;
+  diskW: number;
+}

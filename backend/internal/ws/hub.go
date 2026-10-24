@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -49,9 +51,20 @@ func NewHub(collector *metrics.Collector) *Hub {
 	}
 }
 
+// collectInterval returns the metric streaming interval. It can be tuned with
+// COLLECT_INTERVAL_MS (minimum 500ms); the default is 3s.
+func collectInterval() time.Duration {
+	if v := os.Getenv("COLLECT_INTERVAL_MS"); v != "" {
+		if ms, err := strconv.Atoi(v); err == nil && ms >= 500 {
+			return time.Duration(ms) * time.Millisecond
+		}
+	}
+	return 3 * time.Second
+}
+
 func (h *Hub) Run() {
 	// Background ticker for periodic host metric streaming
-	ticker := time.NewTicker(2000 * time.Millisecond)
+	ticker := time.NewTicker(collectInterval())
 	defer ticker.Stop()
 
 	go func() {

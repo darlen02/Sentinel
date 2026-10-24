@@ -46,3 +46,33 @@ export function getStatusColor(percent: number): {
     glow: 'shadow-[0_0_12px_rgba(16,185,129,0.35)]',
   };
 }
+
+export function getStatusHex(percent: number): string {
+  if (percent >= 85) return '#f43f5e';
+  if (percent >= 65) return '#f59e0b';
+  return '#10b981';
+}
+
+export function getStatusLabel(percent: number): string {
+  if (percent >= 85) return 'Kritik';
+  if (percent >= 65) return 'Yüksek';
+  return 'Normal';
+}
+
+export function formatDuration(ms: number): string {
+  const sec = Math.round(ms / 1000);
+  if (sec < 60) return `${sec} sn`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) {
+    const s = sec % 60;
+    return s ? `${min} dk ${s} sn` : `${min} dk`;
+  }
+  const h = Math.floor(min / 60);
+  if (h < 24) {
+    const m = min % 60;
+    return m ? `${h} sa ${m} dk` : `${h} sa`;
+  }
+  const d = Math.floor(h / 24);
+  const hh = h % 24;
+  return hh ? `${d} gün ${hh} sa` : `${d} gün`;
+}
