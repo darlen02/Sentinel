@@ -51,23 +51,28 @@ export const MemoryCard: React.FC<MemoryCardProps> = ({ memory, samples }) => {
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-colors">
       {/* Top Header & Overview */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-500/10 border border-purple-200/80 dark:border-purple-500/20 text-purple-600 dark:text-purple-400">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-500/10 border border-purple-200/80 dark:border-purple-500/20 text-purple-600 dark:text-purple-400 shrink-0">
             <Layers className="w-5 h-5" />
           </div>
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              Bellek (RAM & Swap)
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Toplam {formatBytes(memory.total)} Fiziksel Bellek Kapasitesi
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                Bellek (RAM & Swap)
+              </h2>
+              <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-purple-50/70 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-900/60">
+                {formatBytes(memory.total)} Toplam
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[280px] sm:max-w-[420px] mt-0.5">
+              Kullanılan: {formatBytes(memory.used)} · Boş: {formatBytes(memory.available)}
             </p>
           </div>
         </div>
 
-        {/* Current Circular Gauge */}
-        <div className="flex items-center self-center sm:self-auto">
-          <RingGauge value={memory.used_percent} size={110} caption="Anlık RAM" />
+        {/* Current Circular Gauge in a subtle card container */}
+        <div className="flex items-center self-center sm:self-auto bg-slate-50/80 dark:bg-slate-950/50 p-2 px-3.5 rounded-2xl border border-slate-200/70 dark:border-slate-800/70 shadow-2xs">
+          <RingGauge value={memory.used_percent} size={86} themeColor="#8b5cf6" caption="Anlık RAM" />
         </div>
       </div>
 
