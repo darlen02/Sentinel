@@ -39,6 +39,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [samples, setSamples] = useState<LiveSample[]>([]);
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   // Theme Management (Default: Light Theme as requested by user)
@@ -154,6 +155,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         metrics={metrics}
         currentUser={user}
+        mobileOpen={mobileSidebarOpen}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
       />
 
       {/* Main Content Area */}
@@ -168,30 +171,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           onToggleTheme={handleToggleTheme}
           onLogout={onLogout}
           onOpenPasswordModal={() => setIsPasswordModalOpen(true)}
+          onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
           pageTitle={getPageTitle(activeTab)}
         />
 
-        {/* Scrollable Dashboard Body (Spreads fluidly across widescreen) */}
-        <main className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+        {/* Scrollable Dashboard Body (Spreads fluidly across widescreen & mobile) */}
+        <main className="flex-1 overflow-y-auto px-3 sm:px-6 py-3.5 sm:py-6 space-y-4 sm:space-y-6">
           {/* Quick Metrics KPI Banner (Always visible for at-a-glance health) */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
             {/* KPI 1: CPU */}
             <div
               onClick={() => setActiveTab('overview')}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-xs hover:border-cyan-500/50 transition-all cursor-pointer"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between shadow-xs hover:border-cyan-500/50 transition-all cursor-pointer min-w-0"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
-                  <Cpu className="w-5 h-5" />
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shrink-0">
+                  <Cpu className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">CPU Yükü</span>
-                  <span className="text-xl font-bold font-mono text-slate-900 dark:text-cyan-300">
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 block font-medium truncate">CPU Yükü</span>
+                  <span className="text-base sm:text-xl font-bold font-mono text-slate-900 dark:text-cyan-300">
                     {metrics ? `${metrics.cpu.overall_percent}%` : '--'}
                   </span>
                 </div>
               </div>
-              <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:block">
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden md:block">
                 {metrics?.cpu.logical_cores || 0} Çekirdek
               </span>
             </div>
@@ -199,20 +203,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             {/* KPI 2: RAM */}
             <div
               onClick={() => setActiveTab('overview')}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-xs hover:border-violet-500/50 transition-all cursor-pointer"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between shadow-xs hover:border-violet-500/50 transition-all cursor-pointer min-w-0"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                  <Layers className="w-5 h-5" />
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 shrink-0">
+                  <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">RAM</span>
-                  <span className="text-xl font-bold font-mono text-slate-900 dark:text-violet-300">
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 block font-medium truncate">RAM</span>
+                  <span className="text-base sm:text-xl font-bold font-mono text-slate-900 dark:text-violet-300">
                     {metrics ? `${metrics.memory.used_percent}%` : '--'}
                   </span>
                 </div>
               </div>
-              <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:block">
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden md:block">
                 {metrics ? formatBytes(metrics.memory.used) : '--'}
               </span>
             </div>
@@ -220,20 +224,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             {/* KPI 3: Storage */}
             <div
               onClick={() => setActiveTab('storage')}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-xs hover:border-amber-500/50 transition-all cursor-pointer"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between shadow-xs hover:border-amber-500/50 transition-all cursor-pointer min-w-0"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  <HardDrive className="w-5 h-5" />
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                  <HardDrive className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">Kök Disk (/)</span>
-                  <span className="text-xl font-bold font-mono text-slate-900 dark:text-amber-300">
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 block font-medium truncate">Kök Disk (/)</span>
+                  <span className="text-base sm:text-xl font-bold font-mono text-slate-900 dark:text-amber-300">
                     {metrics && metrics.disks.length > 0 ? `${metrics.disks[0].used_percent}%` : '--'}
                   </span>
                 </div>
               </div>
-              <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:block">
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden md:block">
                 {metrics && metrics.disks.length > 0 ? formatBytes(metrics.disks[0].free) + ' Boş' : '--'}
               </span>
             </div>
@@ -241,20 +245,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             {/* KPI 4: Network */}
             <div
               onClick={() => setActiveTab('network')}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-xs hover:border-emerald-500/50 transition-all cursor-pointer"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between shadow-xs hover:border-emerald-500/50 transition-all cursor-pointer min-w-0"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <Activity className="w-5 h-5" />
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">Ağ Trafiği</span>
-                  <span className="text-xl font-bold font-mono text-slate-900 dark:text-emerald-300">
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 block font-medium truncate">Ağ Trafiği</span>
+                  <span className="text-base sm:text-xl font-bold font-mono text-slate-900 dark:text-emerald-300">
                     {metrics ? formatSpeed(metrics.network.reduce((a, b) => a + b.speed_recv_per_sec, 0)) : '--'}
                   </span>
                 </div>
               </div>
-              <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:block">
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden md:block">
                 {metrics?.network.length || 0} Arayüz
               </span>
             </div>
@@ -262,21 +266,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             {/* KPI 5: Docker Containers */}
             <div
               onClick={() => setActiveTab('docker')}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-xs hover:border-blue-500/50 transition-all cursor-pointer col-span-2 sm:col-span-1"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center justify-between shadow-xs hover:border-blue-500/50 transition-all cursor-pointer col-span-2 sm:col-span-1 min-w-0"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  <Box className="w-5 h-5" />
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+                  <Box className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">Docker</span>
-                  <span className="text-xl font-bold font-mono text-slate-900 dark:text-blue-300">
+                <div className="min-w-0">
+                  <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 block font-medium truncate">Docker</span>
+                  <span className="text-base sm:text-xl font-bold font-mono text-slate-900 dark:text-blue-300">
                     {runningContainersCount}
                     <span className="text-xs font-normal text-slate-400">/{totalContainersCount}</span>
                   </span>
                 </div>
               </div>
-              <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">Yönet &rarr;</span>
+              <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium shrink-0">Yönet &rarr;</span>
             </div>
           </div>
 

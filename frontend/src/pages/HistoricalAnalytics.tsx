@@ -217,22 +217,22 @@ export const HistoricalAnalytics: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-200">
       {/* Top Header & Range Filter Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sm:gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
-              <TrendingUp className="w-5 h-5" />
+            <div className="p-2 sm:p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 shrink-0">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 Geçmiş Metrik Trendleri & Analiz
-                <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
-                  (SQLite Veritabanı Kayıtları)
+                <span className="text-[10px] sm:text-xs font-normal text-slate-500 dark:text-slate-400">
+                  (SQLite Veritabanı)
                 </span>
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
                 Ölçekli eksenler, tehlike bölgeleri ve zaman çizelgesiyle sunucu telemetrisi
               </p>
             </div>
@@ -242,12 +242,12 @@ export const HistoricalAnalytics: React.FC = () => {
         {/* Range Buttons & Actions */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           {/* Time Range Pills */}
-          <div className="flex rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-1">
+          <div className="flex rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-1 overflow-x-auto max-w-full">
             {RANGE_OPTIONS.map((opt) => (
               <button
                 key={opt.key}
                 onClick={() => setRange(opt.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   range === opt.key
                     ? 'bg-white dark:bg-indigo-600 text-indigo-700 dark:text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -302,17 +302,17 @@ export const HistoricalAnalytics: React.FC = () => {
 
       {/* KPI Highlight Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4">
           {/* Card 1: Peak & Avg CPU */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-xs">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">İşlemci (CPU)</span>
-              <div className="p-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
-                <Cpu className="w-4 h-4" />
+              <span className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">İşlemci (CPU)</span>
+              <div className="p-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 shrink-0">
+                <Cpu className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-mono text-slate-900 dark:text-cyan-300">
+            <div className="flex items-baseline gap-1.5 sm:gap-2">
+              <span className="text-lg sm:text-2xl font-bold font-mono text-slate-900 dark:text-cyan-300">
                 %{summary.avg_cpu}
               </span>
               <span className="text-[11px] text-slate-400">ort.</span>
@@ -440,24 +440,24 @@ export const HistoricalAnalytics: React.FC = () => {
 
       {/* Main Charts Grid: Fully Modernized TimeSeries Charts */}
       {points.length > 0 && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
           {/* Chart 1: CPU History */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/20">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3 sm:mb-4">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-2 rounded-xl bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/20 shrink-0">
                   <Cpu className="w-4 h-4" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                     CPU Kullanım Trendi (%)
                   </h3>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate block">
                     Ortalama & Maksimum Tepe Noktaları
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-xs font-mono">
+              <div className="flex items-center gap-3 text-xs font-mono shrink-0 self-start sm:self-auto">
                 <span className="flex items-center gap-1.5 text-cyan-600 dark:text-cyan-400 font-semibold">
                   <span className="w-2.5 h-0.5 bg-cyan-500 rounded"></span> Ort. CPU
                 </span>
@@ -485,27 +485,27 @@ export const HistoricalAnalytics: React.FC = () => {
           </div>
 
           {/* Chart 2: Memory History */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-500/20">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3 sm:mb-4">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-500/20 shrink-0">
                   <Layers className="w-4 h-4" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                     RAM Bellek Tüketim Trendi (%)
                   </h3>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate block">
                     Fiziksel RAM Kullanım Yüzdesi
                   </span>
                 </div>
               </div>
-              <div className="text-xs font-mono text-violet-600 dark:text-violet-400 font-semibold">
+              <div className="text-xs font-mono text-violet-600 dark:text-violet-400 font-semibold shrink-0 self-start sm:self-auto">
                 Ort. %{summary?.avg_memory}
               </div>
             </div>
 
-            <div className="w-full bg-slate-50/50 dark:bg-slate-950/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80">
+            <div className="w-full bg-slate-50/50 dark:bg-slate-950/40 p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800/80">
               <TimeSeriesChart
                 times={times}
                 series={memSeries}
@@ -528,22 +528,22 @@ export const HistoricalAnalytics: React.FC = () => {
           </div>
 
           {/* Chart 3: Network Throughput History */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3 sm:mb-4">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 shrink-0">
                   <Activity className="w-4 h-4" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                     Ağ Hız Trendi (RX / TX)
                   </h3>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate block">
                     Saniyede İndirilen (Download) ve Gönderilen (Upload) Hızlar
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-xs font-mono">
+              <div className="flex items-center gap-3 text-xs font-mono shrink-0 self-start sm:self-auto">
                 <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
                   <span className="w-2.5 h-0.5 bg-emerald-500 rounded"></span> ↓ İndirme (RX)
                 </span>
@@ -553,7 +553,7 @@ export const HistoricalAnalytics: React.FC = () => {
               </div>
             </div>
 
-            <div className="w-full bg-slate-50/50 dark:bg-slate-950/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80">
+            <div className="w-full bg-slate-50/50 dark:bg-slate-950/40 p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800/80">
               <TimeSeriesChart
                 times={times}
                 series={netSeries}
@@ -570,22 +570,22 @@ export const HistoricalAnalytics: React.FC = () => {
           </div>
 
           {/* Chart 4: Load Average & Containers History */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3 sm:mb-4">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 shrink-0">
                   <HardDrive className="w-4 h-4" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                     Sistem Yükü & Konteynerler
                   </h3>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate block">
                     1 Dakikalık Çekirdek Yük Ortalaması ve Aktif Docker Konteynerler
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-xs font-mono">
+              <div className="flex items-center gap-3 text-xs font-mono shrink-0 self-start sm:self-auto">
                 <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-semibold">
                   <span className="w-2.5 h-0.5 bg-amber-500 rounded"></span> Load (1 dk)
                 </span>
@@ -595,7 +595,7 @@ export const HistoricalAnalytics: React.FC = () => {
               </div>
             </div>
 
-            <div className="w-full bg-slate-50/50 dark:bg-slate-950/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800/80">
+            <div className="w-full bg-slate-50/50 dark:bg-slate-950/40 p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-slate-800/80">
               <TimeSeriesChart
                 times={times}
                 series={loadSeries}

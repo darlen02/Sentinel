@@ -574,7 +574,7 @@ export function TimeSeriesChart({
                   width={plotW}
                   height={plotH}
                   fill="transparent"
-                  style={{ cursor: 'crosshair' }}
+                  style={{ cursor: 'crosshair', touchAction: 'none' }}
                   onPointerMove={handleMove}
                   onPointerDown={handleMove}
                   onPointerLeave={() => setActive(null)}
@@ -583,11 +583,11 @@ export function TimeSeriesChart({
 
               {active !== null && (
                 <div
-                  className="pointer-events-none absolute z-20 min-w-[150px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 px-3 py-2 shadow-lg backdrop-blur-sm text-[11px]"
+                  className="pointer-events-none absolute z-20 min-w-[120px] max-w-[190px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 px-2.5 py-1.5 shadow-lg backdrop-blur-sm text-[10px] sm:text-[11px]"
                   style={
-                    xOf(times[active]) > m.left + plotW * 0.55
-                      ? { top: m.top, right: width - xOf(times[active]) + 14 }
-                      : { top: m.top, left: xOf(times[active]) + 14 }
+                    xOf(times[active]) > m.left + plotW * 0.5
+                      ? { top: m.top, right: Math.max(6, width - xOf(times[active]) + 10) }
+                      : { top: m.top, left: Math.max(6, xOf(times[active]) + 10) }
                   }
                 >
                   <div className="font-semibold text-slate-800 dark:text-slate-100 mb-1.5">

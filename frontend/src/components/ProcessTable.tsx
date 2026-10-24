@@ -63,21 +63,21 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, userRole 
   }, [processes, search, sortBy]);
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm dark:shadow-lg transition-colors">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-sm dark:shadow-lg transition-colors">
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-pink-50 dark:bg-pink-500/10 border border-pink-200 dark:border-pink-500/20 text-pink-600 dark:text-pink-400">
-            <Terminal className="w-5 h-5" />
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-pink-50 dark:bg-pink-500/10 border border-pink-200 dark:border-pink-500/20 text-pink-600 dark:text-pink-400 shrink-0">
+            <Terminal className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <div className="min-w-0">
+            <h2 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 flex-wrap">
               Çalışan Süreçler (Processes)
-              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
-                (Toplam {processes.length} Takip Edilen)
+              <span className="text-[11px] sm:text-xs font-normal text-slate-500 dark:text-slate-400">
+                (Toplam {processes.length})
               </span>
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
               Gerçek Zamanlı Süreç İzleme & Kaynak Tüketim Analizi
             </p>
           </div>
@@ -152,8 +152,8 @@ export const ProcessTable: React.FC<ProcessTableProps> = ({ processes, userRole 
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
+      <div className="overflow-x-auto -mx-3.5 px-3.5 sm:mx-0 sm:px-0">
+        <table className="w-full min-w-[620px] text-left text-xs">
           <thead>
             <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-medium">
               <th className="py-2.5 px-3 w-8"></th>

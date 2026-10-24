@@ -106,21 +106,21 @@ export const DockerContainersCard: React.FC<DockerContainersCardProps> = ({ dock
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs transition-colors">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-xs transition-colors">
       {/* Header & Badges */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200/80 dark:border-blue-500/20 text-blue-600 dark:text-blue-400">
-            <Box className="w-5 h-5" />
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200/80 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 shrink-0">
+            <Box className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <div className="min-w-0">
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 flex-wrap">
               Docker Konteynerleri
-              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+              <span className="text-[11px] sm:text-xs font-normal text-slate-500 dark:text-slate-400">
                 (Toplam {docker.containers_count})
               </span>
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
               Sunucuda Çalışan Aktif Konteynerlerin Durumu & Yönetimi
             </p>
           </div>
@@ -208,8 +208,8 @@ export const DockerContainersCard: React.FC<DockerContainersCardProps> = ({ dock
       </div>
 
       {/* Containers List / Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
+      <div className="overflow-x-auto -mx-3.5 px-3.5 sm:mx-0 sm:px-0">
+        <table className="w-full min-w-[560px] text-left text-xs">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold">
               <th className="py-2.5 px-3">Konteyner Adı</th>

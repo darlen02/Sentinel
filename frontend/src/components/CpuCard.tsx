@@ -45,31 +45,31 @@ export const CpuCard: React.FC<CpuCardProps> = ({ cpu, samples }) => {
   );
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-colors">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-xs flex flex-col justify-between transition-colors">
       {/* Top Header & Overview */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2.5 rounded-xl bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200/80 dark:border-cyan-500/20 text-cyan-600 dark:text-cyan-400 shrink-0">
-            <Cpu className="w-5 h-5" />
+      <div className="flex items-center justify-between gap-2.5 sm:gap-4 mb-3 sm:mb-4">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200/80 dark:border-cyan-500/20 text-cyan-600 dark:text-cyan-400 shrink-0">
+            <Cpu className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 truncate">
                 İşlemci (CPU)
               </h2>
-              <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-cyan-50/70 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200/80 dark:border-cyan-900/60">
-                {cpu.logical_cores} Çekirdek ({cpu.physical_cores || cpu.logical_cores} Fiziksel)
+              <span className="hidden xs:inline-flex px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-mono font-medium bg-cyan-50/70 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200/80 dark:border-cyan-900/60 shrink-0">
+                {cpu.logical_cores} Çekirdek
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[280px] sm:max-w-[420px] mt-0.5" title={cpu.model_name}>
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate max-w-[150px] xs:max-w-[220px] sm:max-w-[420px] mt-0.5" title={cpu.model_name}>
               {cpu.model_name || 'İşlemci'} {cpu.mhz > 0 ? `@ ${(cpu.mhz / 1000).toFixed(2)} GHz` : ''}
             </p>
           </div>
         </div>
 
         {/* Current Circular Gauge in a subtle card container */}
-        <div className="flex items-center self-center sm:self-auto bg-slate-50/80 dark:bg-slate-950/50 p-2 px-3.5 rounded-2xl border border-slate-200/70 dark:border-slate-800/70 shadow-2xs">
-          <RingGauge value={cpu.overall_percent} size={86} themeColor="#06b6d4" caption="Anlık CPU" />
+        <div className="flex items-center shrink-0 bg-slate-50/80 dark:bg-slate-950/50 p-1.5 sm:p-2 px-2.5 sm:px-3 rounded-2xl border border-slate-200/70 dark:border-slate-800/70 shadow-2xs">
+          <RingGauge value={cpu.overall_percent} size={80} themeColor="#06b6d4" caption="Anlık CPU" />
         </div>
       </div>
 
